@@ -503,29 +503,22 @@
         isOthers: () => Object.entries(OS).filter(([key, val]) => key !== 'isOthers').every(([key, val]) => !val()),
     };
 
-    // monitor dom changements
-    const domChangeObserver = new MutationObserver((mutationsList) => {
-        console.log("Detected DOM change (Child List)");
-        const showElement = getShowEle();
-        if (showElement && showElement.getAttribute("inited") !== "true") {
-            init();
-            // 切换链接类型依赖监视器
-            // domChangeObserver.disconnect();
+// 修复 4.10 路由监听，移除不稳定的 window.load 包装
+    const domObserver = new MutationObserver(function () {
+        if (window.location.hash.includes("/item?id=") || window.location.search.includes("?id=")) {
+            const mainButtons = document.querySelector(".mainDetailButtons");
+            if (mainButtons && !document.getElementById("ExternalPlayersBtns")) {
+                if (isEmby === "") {
+                    isEmby = !!document.querySelector('.emby-button'); 
+                }
+                init();
+            }
         }
     });
-    window.addEventListener("load", () => {
-        domChangeObserver.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
+    
+    domObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
     });
-
-    // window.addEventListener("popstate", function() {
-    //     console.log("Detected page navigation (forward or back button)");
-    //     mutation.observe(document.body, {
-    //         childList: true,
-    //         subtree: true
-    //     });
-    // });
 
 })();
