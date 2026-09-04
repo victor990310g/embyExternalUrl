@@ -503,37 +503,40 @@
         isOthers: () => Object.entries(OS).filter(([key, val]) => key !== 'isOthers').every(([key, val]) => !val()),
     };
 
-// 监听 URL 变化或 DOM 突变，确保切换页面时自动触发
-    let lastUrl = location.href;
-    const checkAndInit = () => {
-        const showElement = getShowEle();
-        if (showElement && showElement.getAttribute("inited") !== "true") {
-            init();
+// Emby 4.10 专用的高频路由与 DOM 双重突变监听
+    let lastHash = window.location.hash;
+
+    const checkAndInjectEmby = () => {
+        if (window.location.hash !== lastHash) {
+            lastHash = window.location.hash;
+        }
+        
+        // 匹配 Emby 影片详情页路由
+        if (window.location.hash.includes("/item?id=") || window.location.search.includes("?id=")) {
+            const mainButtons = document.querySelector(".mainDetailButtons");
+            // 确保容器存在，且尚未被注入过按钮
+            if (mainButtons && !document.getElementById("ExternalPlayersBtns")) {
+                if (isEmby === "") {
+                    isEmby = !!document.querySelector('.emby-button'); 
+                }
+                try {
+                    init();
+                    console.log("【Emby外部播放器】检测到路由切换，按钮自动注入成功！");
+                } catch (e) {
+                    console.error("【Emby外部播放器】自动注入报错：", e);
+                }
+            }
         }
     };
 
-    // 1. 深度 DOM 突变监听（防止异步加载慢）
-    const domChangeObserver = new MutationObserver(() => {
-        // 如果 URL 发生变化，重置已初始化标记
-        if (location.href !== lastUrl) {
-            lastUrl = location.href;
-            const oldEle = getShowEle();
-            if (oldEle) oldEle.removeAttribute("inited");
-        }
-        checkAndInit();
-    });
+    // 1. 监听全局 DOM 变动（适配 Emby 异步渲染）
+    const embyObserver = new MutationObserver(checkAndInjectEmby);
+    embyObserver.observe(document.body, { childList: true, subtree: true });
 
-    domChangeObserver.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
+    // 2. 监听浏览器前进后退及单页路由改变
+    window.addEventListener("popstate", checkAndInjectEmby);
 
-    // 2. 页面载入和历史记录改变（前进/后退/点击跳转）时主动触发
-    window.addEventListener("popstate", checkAndInit);
-    window.addEventListener("pushState", checkAndInit);
-    window.addEventListener("replaceState", checkAndInit);
-
-    // 3. 初始加载立即执行一次
-    checkAndInit();
+    // 3. 初始加载时立即检查一次
+    checkAndInjectEmby();
 
 })();
