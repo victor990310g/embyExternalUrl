@@ -503,22 +503,37 @@
         isOthers: () => Object.entries(OS).filter(([key, val]) => key !== 'isOthers').every(([key, val]) => !val()),
     };
 
-// 修复 4.10 路由监听，移除不稳定的 window.load 包装
-    const domObserver = new MutationObserver(function () {
-        if (window.location.hash.includes("/item?id=") || window.location.search.includes("?id=")) {
-            const mainButtons = document.querySelector(".mainDetailButtons");
-            if (mainButtons && !document.getElementById("ExternalPlayersBtns")) {
-                if (isEmby === "") {
-                    isEmby = !!document.querySelector('.emby-button'); 
-                }
-                init();
-            }
+// 监听 URL 变化或 DOM 突变，确保切换页面时自动触发
+    let lastUrl = location.href;
+    const checkAndInit = () => {
+        const showElement = getShowEle();
+        if (showElement && showElement.getAttribute("inited") !== "true") {
+            init();
         }
+    };
+
+    // 1. 深度 DOM 突变监听（防止异步加载慢）
+    const domChangeObserver = new MutationObserver(() => {
+        // 如果 URL 发生变化，重置已初始化标记
+        if (location.href !== lastUrl) {
+            lastUrl = location.href;
+            const oldEle = getShowEle();
+            if (oldEle) oldEle.removeAttribute("inited");
+        }
+        checkAndInit();
     });
-    
-    domObserver.observe(document.body, {
+
+    domChangeObserver.observe(document.body, {
         childList: true,
-        subtree: true,
+        subtree: true
     });
+
+    // 2. 页面载入和历史记录改变（前进/后退/点击跳转）时主动触发
+    window.addEventListener("popstate", checkAndInit);
+    window.addEventListener("pushState", checkAndInit);
+    window.addEventListener("replaceState", checkAndInit);
+
+    // 3. 初始加载立即执行一次
+    checkAndInit();
 
 })();
