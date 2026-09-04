@@ -17,7 +17,7 @@
 (function () {
     'use strict';
     // 是否替换原始外部播放器
-    const replaceOriginLinks = true;
+    const replaceOriginLinks = false;
     // 是否使用内置的 Base64 图标
     const useInnerIcons = true;
     // 移除最后几个冗余的自定义开关
